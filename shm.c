@@ -28,9 +28,23 @@ void shminit() {
   release(&(shm_table.lock));
 }
 
-int shm_open(int id, char **pointer) {
+struct proc *curproc = myproc();
+for (int i = 0; i <= 64; ++i) {
+	if(id == shm_pages[i]) {
+		mappages(curproc->pgdir, PGROUNDUP(sz), PGSIZE, V2P(shm_pages[i]->frame), PTE_W|PTE_U);
+		refcnt++;
+		*pointer = (char *)PGROUNDUP(sz);
+		return 0;
+	}
+	for(int i = 0; i <= 64; ++i) {
+		if(shm_pages[i] == 0) {
+			shm_pages[i] = id;
+			shm_pages[i]->frame = kalloc();
+			refcnt = 1;
+			mappages(curproc->pgdir, PGROUNDUP(sz), PGSIZE, V2P(shm_pages[i]->frame), PTE_W|PTE_U);
+			*pointer = (char *)PGROUNDUP(sz);
+}
 
-//you write this
 
 
 
