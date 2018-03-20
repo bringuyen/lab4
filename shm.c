@@ -30,20 +30,33 @@ void shminit() {
 
 int shm_open(int id, char ** pointer) {
 	struct proc *curproc = myproc();
-	for (int i = 0; i <= 64; ++i) {
-		if(id == shm_pages[i]) {
-			mappages(curproc->pgdir, PGROUNDUP(sz), PGSIZE, V2P(shm_pages[i]->frame), PTE_W|PTE_U);
-			refcnt++;
-			*pointer = (char *)PGROUNDUP(sz);
-			return 0;
+	int i;
+	char *va;
+	va = (char*)PGROUNDUP(curr->sz);
+	
+	acquire(&(shm_table.lock));
+	for (i = 0; i <= 64; ++i) {
+		if(shm_table.shm_pages[i].id == id) {
+			mappages(curproc->pgdir, va, PGSIZE, V2P(sdhm_table.shm_pages[i]->frame), PTE_W|PTE_U);
+			shm_table.shm_pages[i].refcnt++;
+			*pointer = (char *)va;
+			release(&(shm_table.lock));
+			return shm_table.shm_pages[i].refcnt;
 		}
-		for(int i = 0; i <= 64; ++i) {
-			if(shm_pages[i] == 0) {
-				shm_pages[i] = id;
-				shm_pages[i]->frame = kalloc();
-				refcnt = 1;
-				mappages(curproc->pgdir, PGROUNDUP(sz), PGSIZE, V2P(shm_pages[i]->frame), PTE_W|PTE_U);
-				*pointer = (char *)PGROUNDUP(sz);
+	}
+	for(i = 0; i < 64; ++i) {
+		if(shm_table.shm_pages[i].id == 0) {
+			struct shm_page *page = shm_table.shm_pages + i;
+			page->id = id;
+			page-<frame = kalloc();
+			memset(page->frame,0,PGSIZE);
+			page->refcnt += 1;
+			mappages(curproc->pgdir, va, PGSIZE, V2P(page->frame), PTE_W|PTE_U);
+			*pointer = (char *)va;
+			curr->sz = (uint) va;
+			page-refcnt += 1;
+			release(&(shm_table.lock));
+			return page->refcnt;
 	}
 }
 
