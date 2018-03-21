@@ -32,31 +32,34 @@ int shm_open(int id, char ** pointer) {
 	struct proc *curproc = myproc();
 	int i;
 	char *va;
-	va = (char*)PGROUNDUP(curr->sz);
+	va = (char*)PGROUNDUP(curproc->sz);
 	
 	acquire(&(shm_table.lock));
-	for (i = 0; i <= 64; ++i) {
+	for (i = 0; i < 64; ++i) {
 		if(shm_table.shm_pages[i].id == id) {
-			mappages(curproc->pgdir, va, PGSIZE, V2P(sdhm_table.shm_pages[i]->frame), PTE_W|PTE_U);
-			shm_table.shm_pages[i].refcnt++;
+			mappages(curproc->pgdir, va, PGSIZE, V2P(shm_table.shm_pages[i].frame), PTE_W|PTE_U);
+			shm_table.shm_pages[i].refcnt += 1;
 			*pointer = (char *)va;
+			int cnt = shm_table.shm_pages[i].refcnt;
 			release(&(shm_table.lock));
-			return shm_table.shm_pages[i].refcnt;
+			return cnt;
 		}
 	}
 	for(i = 0; i < 64; ++i) {
 		if(shm_table.shm_pages[i].id == 0) {
 			struct shm_page *page = shm_table.shm_pages + i;
+			
 			page->id = id;
-			page-<frame = kalloc();
+			page->frame = kalloc();
 			memset(page->frame,0,PGSIZE);
 			page->refcnt += 1;
 			mappages(curproc->pgdir, va, PGSIZE, V2P(page->frame), PTE_W|PTE_U);
 			*pointer = (char *)va;
-			curr->sz = (uint) va;
-			page-refcnt += 1;
+			curproc->sz = (uint) va;
+			page->refcnt += 1;
+			int cnt = page->refcnt;
 			release(&(shm_table.lock));
-			return page->refcnt;
+			return cnt;
 	}
 }
 
@@ -72,7 +75,7 @@ int shm_close(int id) {
 	int i;
 	acquire(&(shm_table.lock));
 	for ( i = 0; i < 64; i++) {
-		if (shm_table.shm_pages[i].id = id) {
+		if (shm_table.shm_pages[i].id == id) {
 			shm_table.shm_pages[i].refcnt -= 1;
 				if (!shm_table.shm_pages[i].refcnt) {
 					shm_table.shm_pages[i].id =0;
